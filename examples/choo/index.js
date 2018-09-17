@@ -1,29 +1,42 @@
 var html = require('choo/html')
 var devtools = require('choo-devtools')
 var choo = require('choo')
+var Cookies = require('js-cookie')
 
 import atma from '../../dist'
 
+const reqAccessToken = async () => {
+	try {
+		const accessToken = await atma.requestAccessToken(Cookies.get('refresh'))
+		Cookies.set('access', accessToken)	
+	} catch (err) {
+		Cookies.remove('refresh')
+	}
+}
+
 const atmaInit = async (state, emitter) => {
 	atma.init({
-		server: 'localhost:'
+		server: 'http://localhost:6969'
 	})
+
+	reqAccessToken()
 
 	atma.onAuth((response) => {
 		if(response) {
 			console.log('login')
-			state.currentUser = response.data.data
+			Cookies.set('refresh', response.data.token)
 			emitter.emit('replaceState', '/')
 		}
 		else{
 			console.log('logout')
+			Cookies.remove('refresh')
 			emitter.emit('replaceState', '/login')
 		}
 	})
 }
 
 const mainPage = (state, emit) => {
-	if(!atma.isLoggedIn()) {
+	if(!Cookies.get('refresh')) {
 		emit('replaceState', '/login')
 		return loginPage(state, emit)
 	}
@@ -44,7 +57,7 @@ const mainPage = (state, emit) => {
 
 	function logout(e) {
 		e.preventDefault()
-		atma.logout()
+		atma.logout(Cookies.get('refresh'))
 	}
 }
 
@@ -131,7 +144,7 @@ function confirmPage (state, emit) {
 				<div class="w-100">
 					<div class="mw6 tc center ph2 ph4-ns">
 						<h4 class="red">Do not close this window!</h4>
-						<h4 class="pt4">Waiting confirmation with code:</h4>
+						<h4 class="pt2">Waiting confirmation with code:</h4>
 						<h2>${state.confirmCodename}</h2>
 					</div>
 				</div>
@@ -173,10 +186,6 @@ function countStore (state, emitter) {
   })
   emitter.on('onInputRegister', function (value) {
 		state.inputRegister = value
-		emitter.emit('render')
-	})
-	emitter.on('accessToken', (value) => {
-		state.accessToken = value
 		emitter.emit('render')
 	})
 

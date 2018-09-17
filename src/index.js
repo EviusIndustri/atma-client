@@ -3,19 +3,21 @@ import io from 'socket.io-client'
 import Cookies from 'js-cookie'
 
 class Atma {
-	constructor(opts = {}) {
-		this.server = opts.server || 'http://localhost:6969'
+	constructor() {
+		this.server = null
 		this.authSocket = null
 		this.accessTokenPooling = null
-		this.accessTokenExp = opts.accessTokenExp || 30000
+		this.accessTokenExp = null
 	}
 
-	init() {
-		const self = this
-		this.authSocket = io(`${self.server}/auth`)
-		if(Cookies.get('token')) {
-			this.generateAccessTokenPooling(Cookies.get('token'))
+	init(opts = {}) {
+		if(!opts.server) {
+			throw Error('parameter server is required')
+			return
 		}
+		this.server = opts.server
+		this.accessTokenExp = 30000
+		this.authSocket = io(`${this.server}/auth`)
 	}
 
 	login(email) {
@@ -62,9 +64,8 @@ class Atma {
 		})
 	}
 
-	current() {
+	current(refreshToken) {
 		const self = this
-		const refreshToken = Cookies.get('token')
 		return new Promise((resolve, reject) => {
 			axios.get(`${self.server}/current`, {
 				headers: {
@@ -80,29 +81,6 @@ class Atma {
 		})
 	}
 
-	isLoggedIn() {
-		return Cookies.get('token') ? true : false
-	}
-
-	getAccessToken() {
-		return Cookies.get('accessToken')
-	}
-
-	async generateAccessTokenPooling() {
-		const self = this
-
-		this.authSocket.emit('join', {
-			room: Cookies.get('token')
-		})
-		const response = await self.requestAccessToken(Cookies.get('token'))
-		Cookies.set('accessToken', response.data.data)
-
-		this.accessTokenPooling = setInterval(async () => {
-			const response = await self.requestAccessToken(Cookies.get('token'))
-			Cookies.set('accessToken', response.data.data)
-		}, this.accessTokenExp)
-	}
-
 	requestAccessToken(refreshToken) {
 		const self = this
 		if(!this.authSocket) {
@@ -116,6 +94,9 @@ class Atma {
 				}
 			})
 				.then((result) => {
+					this.authSocket.emit('join', {
+						room: refreshToken
+					})
 					resolve(result)
 				})
 				.catch((err) => {
@@ -141,13 +122,12 @@ class Atma {
 		})
 	}
 
-	logout() {
+	logout(token) {
 		if(!this.authSocket) {
 			console.error('atma is not initialized')
 			return 
 		}
-		clearInterval(this.accessTokenPooling)
-		this.authSocket.emit('logout', Cookies.get('token'))
+		this.authSocket.emit('logout', token)
 	}
 
 	onAuth(cb) {
@@ -157,11 +137,9 @@ class Atma {
 		}
 		this.authSocket.on('authState', (response) => {
 			if(response) {
-				Cookies.set('token', response.data.token)
-				this.generateAccessTokenPooling(response.data.token)
-			}
-			else{
-				Cookies.remove('token')
+				this.authSocket.emit('join', {
+					room: response.data.token
+				})
 			}
 			cb(response)
 		})
