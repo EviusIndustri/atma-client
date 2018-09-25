@@ -117,7 +117,7 @@ var Atma = function () {
 		}
 	}, {
 		key: 'requestAccessToken',
-		value: function requestAccessToken(refreshToken) {
+		value: function requestAccessToken(appId, refreshToken) {
 			var _this3 = this;
 
 			var self = this;
@@ -126,7 +126,7 @@ var Atma = function () {
 				return;
 			}
 			return new _promise2.default(function (resolve, reject) {
-				_axios2.default.get(self.server + '/token', {
+				_axios2.default.get(self.server + '/token/' + appId, {
 					headers: {
 						authorization: 'bearer ' + refreshToken
 					}

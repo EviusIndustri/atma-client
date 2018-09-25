@@ -81,14 +81,14 @@ class Atma {
 		})
 	}
 
-	requestAccessToken(refreshToken) {
+	requestAccessToken(appId, refreshToken) {
 		const self = this
 		if(!this.authSocket) {
 			console.error('atma is not initialized')
 			return 
 		}
 		return new Promise((resolve, reject) => {
-			axios.get(`${self.server}/token`, {
+			axios.get(`${self.server}/token/${appId}`, {
 				headers: {
 					authorization: `bearer ${refreshToken}`
 				}
