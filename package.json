@@ -2,7 +2,8 @@
   "name": "@evius/atma-client",
   "version": "1.0.0",
   "description": "",
-  "main": "src/index.js",
+  "module": "src/index.js",
+  "main": "dist/index.js",
   "scripts": {
     "build": "npx babel src/index.js > dist/index.js"
   },
